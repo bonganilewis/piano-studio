@@ -3,17 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
-    "preview": "npx vite preview",
-    "start": "npx serve dist"
+    "start": "npx serve dist -l $PORT"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.0.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
-    "serve": "^14.0.0",
-    "vite": "^5.0.0"
+    "serve": "^14.0.0"
   }
 }

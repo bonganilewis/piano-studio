@@ -1,5 +1,5 @@
 [phases.build]
-cmds = ["npm install", "npm run build"]
+cmds = []
 
 [start]
 cmd = "npx serve dist -l $PORT"
