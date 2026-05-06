@@ -42,7 +42,7 @@ function shiftWeek(isoWeek, delta) {
 
 function venmoLink(handle, amount, note) {
   const h = handle.replace(/^@/, "");
-  return `https://venmo.com/${h}?txn=pay&amount=${amount}&note=${encodeURIComponent(note)}`;
+  return `https://venmo.me/${h}/${amount}?note=${encodeURIComponent(note)}`;
 }
 
 function amountDue(student, attended) {
@@ -631,19 +631,21 @@ export default function App() {
   }, []);
 
   // ── Student CRUD ───────────────────────────────────────────────────────────
-  const addStudent = async (data) => {
-    const { data: newS, error } = await sb.from("students").insert([data]).select().single();
-    if (error) { showToast("Error saving student"); return; }
-    setStudents(p => [...p, newS].sort((a,b)=>a.name.localeCompare(b.name)));
-    showToast("Student added ✓");
-  };
+	const addStudent = async (data) => {
+	  const clean = { ...data, birthday: data.birthday || null, rate: data.rate || 0 };
+	  const { data: newS, error } = await sb.from("students").insert([clean]).select().single();
+	  if (error) { showToast("Error saving student"); return; }
+	  setStudents(p => [...p, newS].sort((a,b)=>a.name.localeCompare(b.name)));
+	  showToast("Student added ✓");
+	};
 
-  const updateStudent = async (id, data) => {
-    const { data: upd, error } = await sb.from("students").update(data).eq("id",id).select().single();
-    if (error) { showToast("Error updating student"); return; }
-    setStudents(p => p.map(s=>s.id===id?upd:s));
-    showToast("Student updated ✓");
-  };
+	const updateStudent = async (id, data) => {
+	  const clean = { ...data, birthday: data.birthday || null, rate: data.rate || 0 };
+	  const { data: upd, error } = await sb.from("students").update(clean).eq("id",id).select().single();
+	  if (error) { showToast("Error updating student"); return; }
+	  setStudents(p => p.map(s=>s.id===id?upd:s));
+	  showToast("Student updated ✓");
+	};
 
   const deleteStudent = async (id) => {
     if (!confirm("Remove this student? All their records will be deleted.")) return;
@@ -656,16 +658,16 @@ export default function App() {
 
   // ── Attendance ─────────────────────────────────────────────────────────────
   const setAttendance = async (studentId, existingRec, attended) => {
-    if (existingRec) {
-      const { data, error } = await sb.from("weekly_records").update({ attended }).eq("id",existingRec.id).select().single();
-      if (error) return;
-      setRecords(p => p.map(r=>r.id===existingRec.id?data:r));
-    } else {
-      const { data, error } = await sb.from("weekly_records").insert([{ student_id:studentId, week, attended, payment_status:"unpaid" }]).select().single();
-      if (error) return;
-      setRecords(p => [...p, data]);
-    }
-  };
+  const { data, error } = await sb.from("weekly_records").upsert(
+    [{ student_id:studentId, week, attended, payment_status:"unpaid" }],
+    { onConflict: "student_id,week" }
+  ).select().single();
+  if (error) return;
+  setRecords(p => {
+    const exists = p.find(r => r.student_id===studentId && r.week===week);
+    return exists ? p.map(r => r.student_id===studentId && r.week===week ? data : r) : [...p, data];
+  });
+};
 
   // ── Payment ────────────────────────────────────────────────────────────────
   const setPayment = async (rec, payment_status) => {
